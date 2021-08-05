@@ -1,0 +1,20 @@
+{
+    "name": "sugatasei/bredala-database",
+    "description": "PHP Abstract Database Class",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mathieu Froehly",
+            "email": "mathieu@sopheos.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Bredala\\Database\\": "src/"
+        }
+    },
+    "minimum-stability": "dev"
+}
