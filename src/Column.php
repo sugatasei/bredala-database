@@ -232,7 +232,7 @@ class Column
     public function autoIncrement(bool $value = true)
     {
         $this->auto_increment = $value;
-        return $this->notNull();
+        return $this->unsigned()->notNull();
     }
 
     /**
