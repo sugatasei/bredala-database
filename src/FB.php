@@ -102,10 +102,16 @@ class FB
             $rows[] = "PRIMARY KEY ({$col})";
         }
 
+        $types = [
+            'UNIQUE' => 'unq',
+            'FULLTEXT' => 'txt',
+            'KEY' => 'idx'
+        ];
+
         // Keys
         foreach ($this->keys['add'] as $key) {
-            $lbl = $key['unique'] ? 'UNIQUE INDEX' : 'INDEX';
-            $suf = $key['unique'] ? 'unq' : 'idx';
+            $lbl = $key['type'] ? $key['type'] . ' INDEX' : 'INDEX';
+            $suf =  $types[$key['type'] ?? 'KEY'];
             $rows[] = "{$lbl} `{$table}_{$key['name']}_{$suf}` ({$key['cols']})";
         }
 
@@ -191,9 +197,16 @@ class FB
             $rows[] = "DROP INDEX `{$table}_{$key}`";
         }
 
+        $types = [
+            'UNIQUE' => 'unq',
+            'FULLTEXT' => 'txt',
+            'KEY' => 'idx'
+        ];
+
+        // Keys
         foreach ($this->keys['add'] as $key) {
-            $lbl = $key['unique'] ? 'UNIQUE INDEX' : 'INDEX';
-            $suf = $key['unique'] ? 'unq' : 'idx';
+            $lbl = $key['type'] ? $key['type'] . ' INDEX' : 'INDEX';
+            $suf =  $types[$key['type'] ?? 'KEY'];
             $rows[] = "ADD {$lbl} `{$table}_{$key['name']}_{$suf}` ({$key['cols']})";
         }
 
@@ -296,13 +309,12 @@ class FB
      * Add an index key
      *
      * @param string $name
-     * @param boolean $unique
      * @param array $cols
      * @return $this
      */
     public function addIndex(string $name, array $cols = [])
     {
-        $this->keys['add'][] = $this->buildKey($name, false, $cols);
+        $this->keys['add'][] = $this->buildKey($name, null, $cols);
         return $this;
     }
 
@@ -310,24 +322,36 @@ class FB
      * Add an unique key
      *
      * @param string $name
-     * @param boolean $unique
      * @param array $cols
      * @return $this
      */
     public function addUnique(string $name, array $cols = [])
     {
-        $this->keys['add'][] = $this->buildKey($name, true, $cols);
+        $this->keys['add'][] = $this->buildKey($name, 'UNIQUE', $cols);
         return $this;
     }
+
+    /**
+     * Add fulltext key
+     *
+     * @param string $name
+     * @param array $cols
+     * @return $this
+     */
+    public function addFulltext(string $name, array $cols = [])
+    {
+        $this->keys['add'][] = $this->buildKey($name, 'FULLTEXT', $cols);
+        return $this;
+    }
+
 
     /**
      * Add an foreign key
      *
      * @param string $name
-     * @param boolean $unique
      * @param array $cols
      */
-    private function buildKey(string $name, bool $unique, array $cols)
+    private function buildKey(string $name, ?string $type, array $cols)
     {
         if (!$cols) $cols[$name] = true;
 
@@ -338,7 +362,7 @@ class FB
 
         return [
             'name' => $name,
-            'unique' => $unique,
+            'type' => $type,
             'cols' => implode(',', $c)
         ];
     }
@@ -364,6 +388,18 @@ class FB
     public function dropUnique(string $name)
     {
         $this->keys['drop'][] = $name . '_unq';
+        return $this;
+    }
+
+    /**
+     * Drop unique
+     *
+     * @param string $name
+     * @return $this
+     */
+    public function dropFulltext(string $name)
+    {
+        $this->keys['drop'][] = $name . '_txt';
         return $this;
     }
 
