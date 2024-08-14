@@ -7,7 +7,6 @@ namespace Bredala\Database;
  */
 class QB
 {
-
     private $data_keys = [];
     private $data_values = [];
     private $data_raw_keys = [];

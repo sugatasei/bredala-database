@@ -46,7 +46,7 @@ class Column
      * @param boolean $default
      * @return $this
      */
-    public function bool(bool $default = false)
+    public function bool(bool $default = null)
     {
         return $this->type('tinyint', 1)->unsigned()->defaultValue($default ? 1 : 0);
     }
