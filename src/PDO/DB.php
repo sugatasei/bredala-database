@@ -312,22 +312,37 @@ class DB implements DBInterface
     }
 
     /**
-     * Fetch first result
-     * Return false if there is not exactly one result
+     * Fetch the first result, or null if there is not exactly one
+     *
+     * The "exactly one" check cannot use rowCount(): PDO only guarantees it for
+     * statements that modify rows, and on a SELECT the SQLite driver reports 0,
+     * which used to make this method return null for every query. It is done by
+     * probing for a second row instead, which every driver supports.
      *
      * @return array|null
      */
     public function one()
     {
-        if (!$this->stmt || $this->stmt->rowCount() !== 1) {
+        if (!$this->stmt) {
             return null;
         }
 
-        return $this->stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+        $row = $this->stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if ($row === false) {
+            return null;
+        }
+
+        return $this->stmt->fetch(\PDO::FETCH_ASSOC) === false ? $row : null;
     }
 
     /**
-     * Number of rows
+     * Number of rows affected by the last statement
+     *
+     * This is PDOStatement::rowCount(), so it is only meaningful after an
+     * INSERT, UPDATE, DELETE or REPLACE. On a SELECT its value is driver
+     * dependent — SQLite reports 0 — so count the rows in SQL instead, with
+     * QB::count(), rather than reading it here.
      *
      * @return int
      */

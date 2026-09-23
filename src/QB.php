@@ -7,16 +7,21 @@ namespace Bredala\Database;
  */
 class QB
 {
+    /**
+     * A condition group being built: the operator linking its parts ("AND",
+     * "OR" or null while it holds less than two), the parts themselves already
+     * rendered and indented, and the operator linking the group to its parent.
+     */
+    private const EMPTY_FRAME = ['op' => null, 'parts' => [], 'prefix' => ''];
+
     private $data_keys = [];
     private $data_values = [];
     private $data_raw_keys = [];
     private $data_raw_values = [];
     private $from_stmt = "";
     private $group_stmt = "";
-    private $group_count = 0;
-    private $group_level = 0;
     private $having_data = [];
-    private $having_stmt = "";
+    private $having_stack = [self::EMPTY_FRAME];
     private $is_distinct = false;
     private $join_stmt = "";
     private $limit_nb = 0;
@@ -24,7 +29,7 @@ class QB
     private $order_by = "";
     private $select_stmt = "";
     private $where_data = [];
-    private $where_stmt = "";
+    private $where_stack = [self::EMPTY_FRAME];
 
     // -------------------------------------------------------------------------
     // Construct
@@ -199,6 +204,55 @@ class QB
     }
 
     /**
+     * Restrict a field to a set of values
+     *
+     * The explicit spelling of whereEq() with an array. whereEq() also accepts a
+     * scalar, null and a Query, each with its own semantics; when the value is a
+     * set, saying so at the call site removes the guesswork.
+     *
+     * An empty set matches nothing, and whereNotIn() with an empty set matches
+     * everything.
+     *
+     * @param string $field
+     * @param array|Query $values
+     * @return QB
+     */
+    public function whereIn(string $field, array|Query $values): QB
+    {
+        return $this->_whereAuto("AND", false, $field, $values);
+    }
+
+    /**
+     * @param string $field
+     * @param array|Query $values
+     * @return QB
+     */
+    public function whereNotIn(string $field, array|Query $values): QB
+    {
+        return $this->_whereAuto("AND", true, $field, $values);
+    }
+
+    /**
+     * @param string $field
+     * @param array|Query $values
+     * @return QB
+     */
+    public function orWhereIn(string $field, array|Query $values): QB
+    {
+        return $this->_whereAuto("OR", false, $field, $values);
+    }
+
+    /**
+     * @param string $field
+     * @param array|Query $values
+     * @return QB
+     */
+    public function orWhereNotIn(string $field, array|Query $values): QB
+    {
+        return $this->_whereAuto("OR", true, $field, $values);
+    }
+
+    /**
      * Group Start
      *
      * @return QB
@@ -225,10 +279,7 @@ class QB
      */
     public function groupEnd(): QB
     {
-        if ($this->group_level > 0) {
-            $this->where_stmt .= "\n" . str_repeat("\t", $this->group_level) . ")";
-            $this->group_level--;
-        }
+        $this->_groupEnd($this->where_stack, 'where');
 
         return $this;
     }
@@ -243,20 +294,11 @@ class QB
      */
     private function _where(string $prefix, string $statement, array $values): QB
     {
-        // Add link keyword if not the first element of a group
-        if (!$this->where_stmt || $this->group_count === 0) {
-            $prefix = "";
-        }
-
-        $this->group_count++;
+        $this->_push($this->where_stack, $prefix, $statement, 'where');
 
         foreach ($values as $v) {
             $this->where_data[] = $v;
         }
-
-        $this->where_stmt .= "\n"
-            . str_repeat("\t", $this->group_level + 1)
-            . trim($prefix . " " . $statement);
 
         return $this;
     }
@@ -270,13 +312,22 @@ class QB
      */
     private function _whereAuto(string $prefix, bool $not, string $field, $value): QB
     {
+        // Belonging to the empty set is false for every row, and not belonging to
+        // it is true for every row. The empty array used to share the null branch
+        // and emit IS NULL / IS NOT NULL, so a filter built from an empty id list
+        // matched the rows whose column is null instead of matching none. IN ()
+        // is not an option: SQLite accepts it, MySQL rejects it.
+        if (is_array($value) && !$value) {
+            return $this->_where($prefix, $not ? '1 = 1' : '1 = 0', []);
+        }
+
         $statement = $not ? '<> ?' : '= ?';
         $values = [$value];
 
-        if ($value === null || (($isArray = is_array($value)) && !$value)) {
+        if ($value === null) {
             $statement = $not ? 'IS NOT NULL' : 'IS NULL';
             $values = [];
-        } elseif ($isArray) {
+        } elseif (is_array($value)) {
             $clause = '?' . str_repeat(",?", count($value) - 1);
             $statement = 'IN (' . $clause . ')';
             if ($not) $statement = "NOT " . $statement;
@@ -299,15 +350,107 @@ class QB
      */
     private function _group(string $prefix): QB
     {
-        if (!$this->where_stmt || $this->group_count === 0) {
-            $prefix = "";
-        }
-
-        $this->where_stmt .= "\n" . str_repeat("\t", $this->group_level + 1) . trim($prefix . " (");
-        $this->group_count = 0;
-        $this->group_level++;
+        $this->where_stack[] = ['op' => null, 'parts' => [], 'prefix' => $prefix];
 
         return $this;
+    }
+
+    // -------------------------------------------------------------------------
+    // Condition groups (shared by WHERE and HAVING)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Appends a condition to the innermost open group.
+     *
+     * A group is linked by a single operator: the first condition sets it, and
+     * any later condition must use the same one. Mixing AND and OR in one group
+     * is rejected rather than emitted flat, because SQL binds AND tighter than
+     * OR and the resulting query would be valid but mean something else than
+     * the chain reads like.
+     *
+     * @param array $frames
+     * @param string $prefix
+     * @param string $body
+     * @param string $kind
+     * @return void
+     * @throws Exception
+     */
+    private function _push(array &$frames, string $prefix, string $body, string $kind): void
+    {
+        $level = count($frames) - 1;
+        $frame = &$frames[$level];
+
+        if (!$frame['parts']) {
+            $prefix = "";
+        } elseif ($frame['op'] === null) {
+            $frame['op'] = $prefix;
+        } elseif ($frame['op'] !== $prefix) {
+            throw Exception::build($this->_mixedOperators($frame['op'], $prefix, $kind));
+        }
+
+        $frame['parts'][] = "\n" . str_repeat("\t", $level + 1) . trim($prefix . " " . $body);
+    }
+
+    /**
+     * Closes the innermost open group and folds it into its parent.
+     *
+     * An empty group is dropped instead of being rendered: it would emit "()"
+     * and swallow the operator of the condition that follows.
+     *
+     * @param array $frames
+     * @param string $kind
+     * @return void
+     * @throws Exception
+     */
+    private function _groupEnd(array &$frames, string $kind): void
+    {
+        if (count($frames) < 2) {
+            return;
+        }
+
+        $frame = array_pop($frames);
+
+        if (!$frame['parts']) {
+            return;
+        }
+
+        $indent = str_repeat("\t", count($frames));
+        $body = "(" . implode("", $frame['parts']) . "\n" . $indent . ")";
+
+        $this->_push($frames, $frame['prefix'], $body, $kind);
+    }
+
+    /**
+     * Closes every group left open and renders the root group.
+     *
+     * @param array $frames
+     * @param string $kind
+     * @return string
+     */
+    private function _flush(array &$frames, string $kind): string
+    {
+        while (count($frames) > 1) {
+            $this->_groupEnd($frames, $kind);
+        }
+
+        return implode("", $frames[0]['parts']);
+    }
+
+    /**
+     * @param string $current
+     * @param string $added
+     * @param string $kind
+     * @return string
+     */
+    private function _mixedOperators(string $current, string $added, string $kind): string
+    {
+        $start = $kind === 'having' ? 'havingGroupStart()' : 'groupStart()';
+        $end = $kind === 'having' ? 'havingGroupEnd()' : 'groupEnd()';
+
+        return "Cannot mix {$current} and {$added} in the same " . strtoupper($kind) . " group: "
+            . "SQL binds AND tighter than OR, so 'a AND b OR c' means '(a AND b) OR c', "
+            . "not the left-to-right reading of the chain. "
+            . "Wrap the run in {$start} / {$end} to make the grouping explicit.";
     }
 
     // -------------------------------------------------------------------------
@@ -363,15 +506,56 @@ class QB
      */
     private function _having(string $prefix, string $statement, array $values): QB
     {
-        if (!$this->having_stmt) {
-            $prefix = "";
-        }
+        $this->_push($this->having_stack, $prefix, $statement, 'having');
 
         foreach ($values as $v) {
             $this->having_data[] = $v;
         }
 
-        $this->having_stmt .= "\n\t" . trim($prefix . " " . $statement);
+        return $this;
+    }
+
+    /**
+     * Having Group Start
+     *
+     * @return QB
+     */
+    public function havingGroupStart(): QB
+    {
+        return $this->_havingGroup("AND");
+    }
+
+    /**
+     * Or Having Group Start
+     *
+     * @return QB
+     */
+    public function orHavingGroupStart(): QB
+    {
+        return $this->_havingGroup("OR");
+    }
+
+    /**
+     * Having Group End
+     *
+     * @return QB
+     */
+    public function havingGroupEnd(): QB
+    {
+        $this->_groupEnd($this->having_stack, 'having');
+
+        return $this;
+    }
+
+    /**
+     * Having group helper
+     *
+     * @param string $prefix
+     * @return QB
+     */
+    private function _havingGroup(string $prefix): QB
+    {
+        $this->having_stack[] = ['op' => null, 'parts' => [], 'prefix' => $prefix];
 
         return $this;
     }
@@ -736,15 +920,9 @@ class QB
      */
     private function _buildWhere(): string
     {
-        if (!$this->where_stmt) {
-            return "";
-        }
+        $stmt = $this->_flush($this->where_stack, 'where');
 
-        while ($this->group_level > 0) {
-            $this->groupEnd();
-        }
-
-        return "\nWHERE" . $this->where_stmt;
+        return $stmt ? "\nWHERE" . $stmt : "";
     }
 
     private function _buildGroupBy(): string
@@ -758,11 +936,9 @@ class QB
 
     private function _buildHaving(): string
     {
-        if ($this->having_stmt) {
-            return "\nHAVING" . $this->having_stmt;
-        }
+        $stmt = $this->_flush($this->having_stack, 'having');
 
-        return "";
+        return $stmt ? "\nHAVING" . $stmt : "";
     }
 
     private function _buildOrderBy(): string

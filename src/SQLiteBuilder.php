@@ -69,7 +69,7 @@ class SQLiteBuilder
         $res = "CREATE TABLE {$this->name} (\n\t";
         $res .= implode(",\n\t", $this->columns);
         if ($this->fk) {
-            $res .= ",\n\t" . implode("\n\t", $this->fk);
+            $res .= ",\n\t" . implode(",\n\t", $this->fk);
         }
         $res .= "\n);";
         return $res;

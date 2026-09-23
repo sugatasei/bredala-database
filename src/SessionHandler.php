@@ -79,11 +79,11 @@ class SessionHandler implements \SessionHandlerInterface
      */
     public function read($session_id)
     {
-        $query = QB::create()
+        $query = QB::create($this->table)
             ->whereEq($this->col_id, $session_id)
-            ->read($this->table);
+            ->read();
 
-        $row = $this->driver->exec($query)->one(false);
+        $row = $this->driver->exec($query)->one();
         return $row ? $row[$this->col_data] : '';
     }
 
@@ -98,11 +98,11 @@ class SessionHandler implements \SessionHandlerInterface
      */
     public function write($session_id, $session_data)
     {
-        $query = QB::create()
+        $query = QB::create($this->table)
             ->add($this->col_id, $session_id)
             ->add($this->col_time, time())
             ->add($this->col_data, $session_data)
-            ->replace($this->table);
+            ->replace();
 
         $this->driver->exec($query);
 
@@ -119,9 +119,9 @@ class SessionHandler implements \SessionHandlerInterface
      */
     public function destroy($session_id)
     {
-        $query = QB::create()
+        $query = QB::create($this->table)
             ->whereEq($this->col_id, $session_id)
-            ->delete($this->table);
+            ->delete();
 
         $this->driver->exec($query);
 
@@ -150,9 +150,9 @@ class SessionHandler implements \SessionHandlerInterface
      */
     public function gc($maxlifetime)
     {
-        $query = QB::create()
+        $query = QB::create($this->table)
             ->where($this->col_time . ' < ?', time() - $maxlifetime)
-            ->delete($this->table);
+            ->delete();
 
         $this->driver->exec($query);
 

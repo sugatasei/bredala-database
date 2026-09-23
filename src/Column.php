@@ -195,12 +195,21 @@ class Column
     /**
      * Set default value
      *
+     * The value is stored as the SQL literal to emit, so a bool has to become 1
+     * or 0 first: it does not take the string branch, and interpolating false
+     * would yield nothing and emit a bare DEFAULT. Same convention as bool().
+     *
      * @param mixed $value
-     * @param boolean $quote
+     * @param boolean $quote quote a string value; pass false for an expression
+     *                       such as CURRENT_TIMESTAMP
      * @return $this
      */
     public function defaultValue($value, bool $quote = true)
     {
+        if (is_bool($value)) {
+            $value = (int) $value;
+        }
+
         if ($quote && is_string($value)) {
             $this->default = FB::quote($value);
         } else {

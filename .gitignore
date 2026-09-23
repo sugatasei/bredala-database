@@ -1,0 +1,12 @@
+vendor/
+debug/
+composer.lock
+.phpunit.result.cache
+
+# Scratch databases written by the SQLite integration tests. The tests use
+# sqlite::memory: wherever they can; tests/tmp only holds the files needed when
+# a test opens two connections onto the same data.
+tests/tmp/
+*.sqlite
+*.sqlite3
+*.db

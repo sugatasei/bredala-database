@@ -14,6 +14,7 @@ class Exception extends \Exception
     const BIND = 3;
     const EXECUTE = 4;
     const TRANSACTION = 5;
+    const BUILD = 6;
 
     /**
      * @param string $msg
@@ -63,6 +64,16 @@ class Exception extends \Exception
     public static function transaction(string $msg, \Throwable $prev = null)
     {
         return new static($msg, self::TRANSACTION, $prev);
+    }
+
+    /**
+     * @param string $msg
+     * @param \Throwable $prev
+     * @return $this
+     */
+    public static function build(string $msg, \Throwable $prev = null)
+    {
+        return new static($msg, self::BUILD, $prev);
     }
 }
 

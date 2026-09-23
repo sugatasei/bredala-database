@@ -7,30 +7,22 @@ namespace Bredala\Database;
  */
 class FB
 {
-    protected $cols;
-    protected $primary;
-    protected $keys;
-    protected $fk;
+    protected array $cols;
+    protected array $primary;
+    protected array $keys;
+    protected array $fk;
 
     public function __construct()
-    {
-        $this->reset();
-    }
-
-    /**
-     * @return $this
-     */
-    public static function create()
-    {
-        return new static();
-    }
-
-    public function reset()
     {
         $this->cols = ['add' => [], 'drop' => [], 'change' => []];
         $this->primary = ['add' => [], 'drop' => false];
         $this->keys = ['add' => [], 'drop' => []];
         $this->fk = ['add' => [], 'drop' => []];
+    }
+
+    public static function create(): static
+    {
+        return new static();
     }
 
     // -------------------------------------------------------------------------
@@ -39,12 +31,6 @@ class FB
 
     /**
      * Create schema
-     *
-     * @param string $name
-     * @param bool $check_exists
-     * @param string $charset
-     * @param string $collate
-     * @return string
      */
     public function createSchema(string $name, string $charset = 'utf8mb4', string $collate = 'utf8mb4_general_ci'): string
     {
@@ -58,16 +44,11 @@ class FB
         }
         $statement .= ";";
 
-        $this->reset();
         return $this->query($statement);
     }
 
     /**
      * Drop schema
-     *
-     * @param string $name
-     * @param bool $check_exists
-     * @return string
      */
     public function dropSchema(string $name): string
     {
@@ -80,9 +61,6 @@ class FB
 
     /**
      * Create table
-     *
-     * @param string $name
-     * @param boolean $check_exists
      */
     public function createTable(string $name, string $comment = ""): string
     {
@@ -129,10 +107,6 @@ class FB
 
     /**
      * Drop table
-     *
-     * @param string $name
-     * @param bool $check_exists
-     * @return string
      */
     public function dropTable(string $name): string
     {
@@ -142,10 +116,6 @@ class FB
 
     /**
      * Rename table
-     *
-     * @param string $from
-     * @param string $to
-     * @return string
      */
     public function renameTable(string $from, string $to): string
     {
@@ -158,9 +128,6 @@ class FB
      * Alter table
      *
      * Warning : combining several operations of different type, may cause SQL errors
-     *
-     * @param string $name
-     * @return string
      */
     public function alterTable(string $name): string
     {
@@ -230,12 +197,8 @@ class FB
 
     /**
      * Add a column
-     *
-     * @param string $name
-     * @param callable|null $callback
-     * @return $this
      */
-    public function addColumn(string $name, ?callable $callback = null)
+    public function addColumn(string $name, ?callable $callback = null): static
     {
         $col = new Column($name);
         $this->cols['add'][] = $col;
@@ -245,10 +208,8 @@ class FB
 
     /**
      * Drop a column
-     *
-     * @param string $name
      */
-    public function dropColumn(string $name)
+    public function dropColumn(string $name): static
     {
         $this->cols['drop'][] = $name;
         return $this;
@@ -256,13 +217,8 @@ class FB
 
     /**
      * Change a column
-     *
-     * @param string $name
-     * @param string|null $new_name
-     * @param callable|null $callback
-     * @return $this
      */
-    public function changeColumn(string $name, ?string $new_name = null, ?callable $callback = null)
+    public function changeColumn(string $name, ?string $new_name = null, ?callable $callback = null): static
     {
         if (!$new_name) $new_name = $name;
 
@@ -278,11 +234,8 @@ class FB
 
     /**
      * Add a primary key
-     *
-     * @param string $names
-     * @return $this
      */
-    public function addPrimary(...$names)
+    public function addPrimary(...$names): static
     {
         foreach ($names as $name) {
             $this->primary['add'][] = "`{$name}`";
@@ -294,7 +247,7 @@ class FB
      * Drop primary key
      * @return $this
      */
-    public function dropPrimary()
+    public function dropPrimary(): static
     {
         $this->primary['drop'] = true;
         return $this;
@@ -311,7 +264,7 @@ class FB
      * @param array $cols
      * @return $this
      */
-    public function addIndex(string $name, array $cols = [])
+    public function addIndex(string $name, array $cols = []): static
     {
         $this->keys['add'][] = $this->buildKey($name, null, $cols);
         return $this;
@@ -324,7 +277,7 @@ class FB
      * @param array $cols
      * @return $this
      */
-    public function addUnique(string $name, array $cols = [])
+    public function addUnique(string $name, array $cols = []): static
     {
         $this->keys['add'][] = $this->buildKey($name, 'UNIQUE', $cols);
         return $this;
@@ -337,7 +290,7 @@ class FB
      * @param array $cols
      * @return $this
      */
-    public function addFulltext(string $name, array $cols = [])
+    public function addFulltext(string $name, array $cols = []): static
     {
         $this->keys['add'][] = $this->buildKey($name, 'FULLTEXT', $cols);
         return $this;
@@ -346,11 +299,8 @@ class FB
 
     /**
      * Add an foreign key
-     *
-     * @param string $name
-     * @param array $cols
      */
-    private function buildKey(string $name, ?string $type, array $cols)
+    private function buildKey(string $name, ?string $type, array $cols): array
     {
         if (!$cols) $cols[$name] = true;
 
@@ -372,7 +322,7 @@ class FB
      * @param string $name
      * @return $this
      */
-    public function dropIndex(string $name)
+    public function dropIndex(string $name): static
     {
         $this->keys['drop'][] = $name . '_idx';
         return $this;
@@ -380,11 +330,8 @@ class FB
 
     /**
      * Drop unique
-     *
-     * @param string $name
-     * @return $this
      */
-    public function dropUnique(string $name)
+    public function dropUnique(string $name): static
     {
         $this->keys['drop'][] = $name . '_unq';
         return $this;
@@ -392,11 +339,8 @@ class FB
 
     /**
      * Drop unique
-     *
-     * @param string $name
-     * @return $this
      */
-    public function dropFulltext(string $name)
+    public function dropFulltext(string $name): static
     {
         $this->keys['drop'][] = $name . '_txt';
         return $this;
@@ -408,27 +352,21 @@ class FB
 
     /**
      * Add a foreign key
-     *
-     * @param string $field
-     * @param string $target
-     * @param string $delete
-     * @param string $update
-     * @return $this
      */
-    public function addFk(string $field, string $target, $delete = 'CASCADE', $update = 'CASCADE')
+    public function addFk(string $field, string $target, $delete = 'CASCADE', $update = 'CASCADE'): static
     {
         $target_array = explode('.', $target);
 
         if (count($target_array) !== 2) {
             $message = $target . " is not a valid target";
-            Exception::prepare($message);
+            throw Exception::prepare($message);
         }
 
         $statement = "CONSTRAINT `%s_{$field}_fk`";
         $statement .= " FOREIGN KEY (`{$field}`)";
         $statement .= " REFERENCES %s`{$target_array[0]}` (`$target_array[1]`)";
         $statement .= " ON DELETE {$delete}";
-        $statement .= " ON UPDATE {$delete}";
+        $statement .= " ON UPDATE {$update}";
 
         $this->fk['add'][] = $statement;
         return $this;
@@ -436,22 +374,16 @@ class FB
 
     /**
      * Add Foreign key index
-     *
-     * @param string $field
-     * @return $this
      */
-    public function addFkIndex(string $field)
+    public function addFkIndex(string $field): static
     {
         return $this->addIndex($field . '_fk', [$field => true]);
     }
 
     /**
      * Drop a foreign key
-     *
-     * @param string $field
-     * @return $this
      */
-    public function dropFk(string $field)
+    public function dropFk(string $field): static
     {
         $this->fk['drop'][] = $field;
         return $this;
@@ -459,11 +391,8 @@ class FB
 
     /**
      * Drop Foreign key index
-     *
-     * @param string $field
-     * @return $this
      */
-    public function dropFkIndex(string $field)
+    public function dropFkIndex(string $field): static
     {
         return $this->dropIndex($field . '_fk');
     }
@@ -480,7 +409,7 @@ class FB
      */
     public static function checkIdentifier(string $value): string
     {
-        if ($value && !preg_match("^[a-zA-Z0-9]+$", $value)) {
+        if ($value && !preg_match("/^[a-zA-Z0-9]+$/", $value)) {
             $message = "{$value} is not a valid identifier";
             throw Exception::prepare($message);
         }
@@ -494,7 +423,6 @@ class FB
      */
     protected function query(string $statement): string
     {
-        $this->reset();
         return $statement;
     }
 
@@ -538,14 +466,27 @@ class FB
     }
 
     /**
-     * Quote a value
+     * Quote a value as a SQL string literal
      *
-     * @param string $value
+     * Only null yields an empty string, meaning "no literal at all" — callers
+     * use it to decide whether to emit the clause. Every other value, falsy
+     * ones included, is quoted: '0', '' and false must not silently collapse
+     * into a bare DEFAULT.
+     *
+     * @param scalar|null $value
      * @return string
      */
     public static function quote($value): string
     {
-        return $value ? "'" . str_replace("'", "''", $value) . "'" : '';
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            $value = $value ? '1' : '0';
+        }
+
+        return "'" . str_replace("'", "''", (string) $value) . "'";
     }
 
     // -------------------------------------------------------------------------
