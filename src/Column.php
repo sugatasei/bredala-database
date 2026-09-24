@@ -2,20 +2,17 @@
 
 namespace Bredala\Database;
 
-/**
- * Column
- */
 class Column
 {
-    protected $name;
-    protected $type = null;
-    protected $unsigned = false;
-    protected $auto_increment = false;
-    protected $not_null = false;
-    protected $default = null;
-    protected $after = null;
-    protected $first = false;
-    protected $comment = null;
+    protected string $name;
+    protected ?string $type = null;
+    protected bool $unsigned = false;
+    protected bool $auto_increment = false;
+    protected bool $not_null = false;
+    protected string|int|float|null $default = null;
+    protected ?string $after = null;
+    protected bool $first = false;
+    protected ?string $comment = null;
 
     public function __construct(string $name)
     {
@@ -23,14 +20,7 @@ class Column
         $this->varchar();
     }
 
-    /**
-     * Set type
-     *
-     * @param string $type
-     * @param mixed $constraints
-     * @return $this
-     */
-    public function type(string $type, ...$constraints)
+    public function type(string $type, int|string ...$constraints): static
     {
         $this->type = mb_strtoupper($type);
         if ($constraints) {
@@ -40,153 +30,82 @@ class Column
         return $this;
     }
 
-    /**
-     * TYPE : BOOL
-     *
-     * @param boolean $default
-     * @return $this
-     */
-    public function bool(bool $default = null)
+    public function bool(?bool $default = null): static
     {
         return $this->type('tinyint', 1)->unsigned()->defaultValue($default ? 1 : 0);
     }
 
     /**
-     * Type : INT
-     *
-     * @param string $prefix : TINY SMALL MEDIUM BIG
-     * @return $this
+     * @param string $prefix TINY, SMALL, MEDIUM or BIG
      */
-    public function int($prefix = '')
+    public function int(string $prefix = ''): static
     {
         return $this->type($prefix . 'int');
     }
 
-    /**
-     * Type : FLOAT
-     *
-     * @return $this
-     */
-    public function float()
+    public function float(): static
     {
         return $this->type('float');
     }
 
-    /**
-     * Type : DECIMAL
-     *
-     * @param integer $precision
-     * @param integer $scale
-     * @return $this
-     */
-    public function decimal(int $precision = 10, int $scale = 2)
+    public function decimal(int $precision = 10, int $scale = 2): static
     {
         return $this->type('decimal', $precision, $scale);
     }
 
-    /**
-     * Type : CHAR
-     *
-     * @param integer $len
-     * @return $this
-     */
-    public function char(int $len)
+    public function char(int $len): static
     {
         return $this->type('char', $len);
     }
 
-    /**
-     * Type : VARCHAR
-     *
-     * @param integer $len
-     * @return $this
-     */
-    public function varchar(int $len = 255)
+    public function varchar(int $len = 255): static
     {
         return $this->type('varchar', $len);
     }
 
     /**
-     * Type : TEXT
-     *
-     * @param string $prefix : TINY, MEDIUM, LONG
-     * @return $this
+     * @param string $prefix TINY, MEDIUM or LONG
      */
-    public function text($prefix = '')
+    public function text(string $prefix = ''): static
     {
         return $this->type($prefix . 'text');
     }
 
     /**
-     * Type : BLOB
-     *
-     * @param string $prefix : TINY, MEDIUM, LONG
-     * @return $this
+     * @param string $prefix TINY, MEDIUM or LONG
      */
-    public function blob($prefix = '')
+    public function blob(string $prefix = ''): static
     {
         return $this->type($prefix . 'blob');
     }
 
-    /**
-     * Type : TIMESTAMP
-     *
-     * @return $this
-     */
-    public function timestamp()
+    public function timestamp(): static
     {
         return $this->type('timestamp');
     }
 
-    /**
-     * Type : DATETIME
-     *
-     * @return $this
-     */
-    public function datetime()
+    public function datetime(): static
     {
         return $this->type('datetime');
     }
 
-    /**
-     * Type : DATE
-     *
-     * @return $this
-     */
-    public function date()
+    public function date(): static
     {
         return $this->type('date');
     }
 
-    /**
-     * Type : TIME
-     *
-     * @return $this
-     */
-    public function time()
+    public function time(): static
     {
         return $this->type('time');
     }
 
-    /**
-     * Set unsigned
-     *
-     * @param bool $value
-     * @return $this
-     */
-    public function unsigned(bool $value = true)
+    public function unsigned(bool $value = true): static
     {
         $this->unsigned = $value;
         return $this;
     }
 
-    /**
-     * Force not null
-     *
-     * @param boolean $value
-     * @return $this
-     */
-    public function notNull()
+    public function notNull(): static
     {
         $this->not_null = true;
         return $this;
@@ -199,12 +118,10 @@ class Column
      * or 0 first: it does not take the string branch, and interpolating false
      * would yield nothing and emit a bare DEFAULT. Same convention as bool().
      *
-     * @param mixed $value
-     * @param boolean $quote quote a string value; pass false for an expression
-     *                       such as CURRENT_TIMESTAMP
-     * @return $this
+     * @param bool $quote quote a string value; pass false for an expression
+     *                    such as CURRENT_TIMESTAMP
      */
-    public function defaultValue($value, bool $quote = true)
+    public function defaultValue(string|int|float|bool|null $value, bool $quote = true): static
     {
         if (is_bool($value)) {
             $value = (int) $value;
@@ -222,65 +139,40 @@ class Column
     /**
      * Default value for datetime columns
      *
-     * @param boolean $on_update : add ON UPDATE CURRENT_TIMESTAMP
-     * @return $this
+     * @param bool $on_update add ON UPDATE CURRENT_TIMESTAMP
      */
-    public function defaultTimestamp($on_update = false)
+    public function defaultTimestamp(bool $on_update = false): static
     {
         $command = 'CURRENT_TIMESTAMP';
         if ($on_update) $command .= '  ON UPDATE CURRENT_TIMESTAMP';
         return $this->defaultValue($command, false);
     }
 
-    /**
-     * Add AUTO_INCREMENT
-     *
-     * @param bool $value
-     * @return $this
-     */
-    public function autoIncrement(bool $value = true)
+    public function autoIncrement(bool $value = true): static
     {
         $this->auto_increment = $value;
         return $this->unsigned()->notNull();
     }
 
-    /**
-     * Add COMMENT
-     *
-     * @param string $value
-     * @return $this
-     */
-    public function comment(string $value)
+    public function comment(string $value): static
     {
         $this->comment = FB::quote($value);
         return $this;
     }
 
-    /**
-     * Add first
-     */
-    public function first()
+    public function first(): static
     {
         $this->first = true;
         return $this;
     }
 
-    /**
-     * Add after
-     *
-     * @param string $name
-     * @return $this
-     */
-    public function after(string $name)
+    public function after(string $name): static
     {
         $this->after = $name;
         return $this;
     }
 
-    /**
-     * @return string
-     */
-    public function __toString()
+    public function __toString(): string
     {
         $str = "`{$this->name}` {$this->type}";
 

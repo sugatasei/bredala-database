@@ -7,32 +7,16 @@ use Bredala\Database\QB;
 
 class Database
 {
-    /**
-     * @var DBInterface
-     */
-    private $db;
+    private DBInterface $db;
+    private string $dbname;
 
-    /**
-     * @var string
-     */
-    private $dbname;
-
-    /**
-     * @param DBInterface $db
-     * @param string $dbname
-     */
     public function __construct(DBInterface $db, string $dbname)
     {
         $this->db = $db;
         $this->dbname = $dbname;
     }
 
-    /**
-     * @param DBInterface $db
-     * @param string $dbname
-     * @return static
-     */
-    public static function create(DBInterface $db, string $dbname)
+    public static function create(DBInterface $db, string $dbname): static
     {
         return new static($db, $dbname);
     }
@@ -40,7 +24,7 @@ class Database
     /**
      * @return DocTable[]
      */
-    public function run()
+    public function run(): array
     {
         $query = QB::create('information_schema.tables')
             ->select('table_name as name')
@@ -64,10 +48,9 @@ class Database
     }
 
     /**
-     * @param string $name
      * @return DocField[]
      */
-    private function fields(string $name)
+    private function fields(string $name): array
     {
         $references = $this->references($name);
 
@@ -117,7 +100,10 @@ class Database
         return $cols;
     }
 
-    private function references($name)
+    /**
+     * @return array<string, string> "table.column" referenced, keyed by column
+     */
+    private function references(string $name): array
     {
         $query = QB::create('information_schema.key_column_usage')
             ->select('column_name')

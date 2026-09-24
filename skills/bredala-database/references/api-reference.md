@@ -153,4 +153,4 @@ Every mutator returns `DBInterface`, so calls chain.
 
 `Bredala\Database\Exception extends \Exception`. Codes `CONNECT = 1`, `PREPARE = 2`, `BIND = 3`, `EXECUTE = 4`, `TRANSACTION = 5`.
 
-Static **factories** — they build and return, they do **not** throw: `connect(string $msg, \Throwable $prev = null)`, `prepare(...)`, `bind(...)`, `execute(...)`, `transaction(...)`. Always write `throw Exception::connect($msg)`.
+Static **factories** — they build and return, they do **not** throw: `connect(string $msg, ?\Throwable $prev = null)`, `prepare(...)`, `bind(...)`, `execute(...)`, `transaction(...)`. Always write `throw Exception::connect($msg)`.

@@ -12,41 +12,34 @@ class QB
      * "OR" or null while it holds less than two), the parts themselves already
      * rendered and indented, and the operator linking the group to its parent.
      */
-    private const EMPTY_FRAME = ['op' => null, 'parts' => [], 'prefix' => ''];
+    private const array EMPTY_FRAME = ['op' => null, 'parts' => [], 'prefix' => ''];
 
-    private $data_keys = [];
-    private $data_values = [];
-    private $data_raw_keys = [];
-    private $data_raw_values = [];
-    private $from_stmt = "";
-    private $group_stmt = "";
-    private $having_data = [];
-    private $having_stack = [self::EMPTY_FRAME];
-    private $is_distinct = false;
-    private $join_stmt = "";
-    private $limit_nb = 0;
-    private $offset_nb = 0;
-    private $order_by = "";
-    private $select_stmt = "";
-    private $where_data = [];
-    private $where_stack = [self::EMPTY_FRAME];
+    private array $data_keys = [];
+    private array $data_values = [];
+    private array $data_raw_keys = [];
+    private array $data_raw_values = [];
+    private string $from_stmt = "";
+    private string $group_stmt = "";
+    private array $having_data = [];
+    private array $having_stack = [self::EMPTY_FRAME];
+    private bool $is_distinct = false;
+    private string $join_stmt = "";
+    private int $limit_nb = 0;
+    private int $offset_nb = 0;
+    private string $order_by = "";
+    private string $select_stmt = "";
+    private array $where_data = [];
+    private array $where_stack = [self::EMPTY_FRAME];
 
     // -------------------------------------------------------------------------
     // Construct
     // -------------------------------------------------------------------------
 
-    /**
-     * @param string $table
-     */
     public function __construct(string $table = '')
     {
         $this->from_stmt = $table;
     }
 
-    /**
-     * @param string $table
-     * @return QB
-     */
     public static function create(string $table = ''): QB
     {
         return new static($table);
@@ -56,12 +49,6 @@ class QB
     // Select
     // -------------------------------------------------------------------------
 
-    /**
-     * Select fields
-     *
-     * @param string ...$cols
-     * @return QB
-     */
     public function select(string ...$cols): QB
     {
         if (!$cols) {
@@ -73,11 +60,6 @@ class QB
         return $this;
     }
 
-    /**
-     * Select distinct
-     *
-     * @return QB
-     */
     public function distinct(): QB
     {
         $this->is_distinct = true;
@@ -88,49 +70,22 @@ class QB
     // Table
     // -------------------------------------------------------------------------
 
-    /**
-     * Join
-     *
-     * @param string $table
-     * @param string $cond
-     * @return QB
-     */
     public function join(string $table, string $cond): QB
     {
         return $this->_join($table, $cond);
     }
 
-    /**
-     * Left join
-     *
-     * @param string $table
-     * @param string $cond
-     * @return QB
-     */
     public function left(string $table, string $cond): QB
     {
         return $this->_join($table, $cond, "LEFT");
     }
 
-    /**
-     * Right join
-     *
-     * @param string $table
-     * @param string $cond
-     * @return QB
-     */
     public function right(string $table, string $cond): QB
     {
         return $this->_join($table, $cond, "RIGHT");
     }
 
-    /**
-     * @param string $table
-     * @param string $cond
-     * @param string $type
-     * @return QB
-     */
-    private function _join(string $table, string $cond, $type = ""): QB
+    private function _join(string $table, string $cond, string $type = ""): QB
     {
         $this->join_stmt .= "\n" . trim($type . " JOIN " . $table . " ON " . $cond);
         return $this;
@@ -140,65 +95,36 @@ class QB
     // Where
     // -------------------------------------------------------------------------
 
-    /**
-     * Where
-     *
-     * @param string $statement
-     * @param  mixed $values
-     * @return QB
-     */
-    public function where(string $statement, ...$values): QB
+    public function where(string $statement, mixed ...$values): QB
     {
         return $this->_where("AND", $statement, $values);
     }
 
-    /**
-     * Or Where
-     *
-     * @param string $statement
-     * @param  mixed $values
-     * @return QB
-     */
-    public function orWhere(string $statement, ...$values): QB
+    public function orWhere(string $statement, mixed ...$values): QB
     {
         return $this->_where("OR", $statement, $values);
     }
 
     /**
-     * @param string $field
-     * @param mixed $value
-     * @return QB
+     * Compares a field to a value: = for a scalar, IS NULL for null, IN for an
+     * array or a Query
      */
-    public function whereEq(string $field, $value): QB
+    public function whereEq(string $field, mixed $value): QB
     {
         return $this->_whereAuto("AND", false, $field, $value);
     }
-    /**
-     * @param string $field
-     * @param mixed $value
-     * @return QB
-     */
-    public function whereNot(string $field, $value): QB
+
+    public function whereNot(string $field, mixed $value): QB
     {
         return $this->_whereAuto("AND", true, $field, $value);
     }
 
-    /**
-     * @param string $field
-     * @param mixed $value
-     * @return QB
-     */
-    public function orWhereEq(string $field, $value): QB
+    public function orWhereEq(string $field, mixed $value): QB
     {
         return $this->_whereAuto("OR", false, $field, $value);
     }
 
-    /**
-     * @param string $field
-     * @param mixed $value
-     * @return QB
-     */
-    public function orWhereNot(string $field, $value): QB
+    public function orWhereNot(string $field, mixed $value): QB
     {
         return $this->_whereAuto("OR", true, $field, $value);
     }
@@ -212,71 +138,37 @@ class QB
      *
      * An empty set matches nothing, and whereNotIn() with an empty set matches
      * everything.
-     *
-     * @param string $field
-     * @param array|Query $values
-     * @return QB
      */
     public function whereIn(string $field, array|Query $values): QB
     {
         return $this->_whereAuto("AND", false, $field, $values);
     }
 
-    /**
-     * @param string $field
-     * @param array|Query $values
-     * @return QB
-     */
     public function whereNotIn(string $field, array|Query $values): QB
     {
         return $this->_whereAuto("AND", true, $field, $values);
     }
 
-    /**
-     * @param string $field
-     * @param array|Query $values
-     * @return QB
-     */
     public function orWhereIn(string $field, array|Query $values): QB
     {
         return $this->_whereAuto("OR", false, $field, $values);
     }
 
-    /**
-     * @param string $field
-     * @param array|Query $values
-     * @return QB
-     */
     public function orWhereNotIn(string $field, array|Query $values): QB
     {
         return $this->_whereAuto("OR", true, $field, $values);
     }
 
-    /**
-     * Group Start
-     *
-     * @return QB
-     */
     public function groupStart(): QB
     {
         return $this->_group("AND");
     }
 
-    /**
-     * Or Group Start
-     *
-     * @return QB
-     */
     public function orGroupStart(): QB
     {
         return $this->_group("OR");
     }
 
-    /**
-     * Group End
-     *
-     * @return QB
-     */
     public function groupEnd(): QB
     {
         $this->_groupEnd($this->where_stack, 'where');
@@ -284,14 +176,6 @@ class QB
         return $this;
     }
 
-    /**
-     * Where helper
-     *
-     * @param string $prefix
-     * @param string $statement
-     * @param array $values
-     * @return QB
-     */
     private function _where(string $prefix, string $statement, array $values): QB
     {
         $this->_push($this->where_stack, $prefix, $statement, 'where');
@@ -303,14 +187,7 @@ class QB
         return $this;
     }
 
-    /**
-     * @param string $prefix
-     * @param boolean $not
-     * @param string $field
-     * @param mixed $value
-     * @return QB
-     */
-    private function _whereAuto(string $prefix, bool $not, string $field, $value): QB
+    private function _whereAuto(string $prefix, bool $not, string $field, mixed $value): QB
     {
         // Belonging to the empty set is false for every row, and not belonging to
         // it is true for every row. The empty array used to share the null branch
@@ -342,12 +219,6 @@ class QB
         return $this->_where($prefix, "{$field} {$statement}", $values);
     }
 
-    /**
-     * Group helper
-     *
-     * @param string $prefix
-     * @return QB
-     */
     private function _group(string $prefix): QB
     {
         $this->where_stack[] = ['op' => null, 'parts' => [], 'prefix' => $prefix];
@@ -368,11 +239,6 @@ class QB
      * OR and the resulting query would be valid but mean something else than
      * the chain reads like.
      *
-     * @param array $frames
-     * @param string $prefix
-     * @param string $body
-     * @param string $kind
-     * @return void
      * @throws Exception
      */
     private function _push(array &$frames, string $prefix, string $body, string $kind): void
@@ -397,9 +263,6 @@ class QB
      * An empty group is dropped instead of being rendered: it would emit "()"
      * and swallow the operator of the condition that follows.
      *
-     * @param array $frames
-     * @param string $kind
-     * @return void
      * @throws Exception
      */
     private function _groupEnd(array &$frames, string $kind): void
@@ -422,10 +285,6 @@ class QB
 
     /**
      * Closes every group left open and renders the root group.
-     *
-     * @param array $frames
-     * @param string $kind
-     * @return string
      */
     private function _flush(array &$frames, string $kind): string
     {
@@ -436,12 +295,6 @@ class QB
         return implode("", $frames[0]['parts']);
     }
 
-    /**
-     * @param string $current
-     * @param string $added
-     * @param string $kind
-     * @return string
-     */
     private function _mixedOperators(string $current, string $added, string $kind): string
     {
         $start = $kind === 'having' ? 'havingGroupStart()' : 'groupStart()';
@@ -457,12 +310,6 @@ class QB
     // Group & Having
     // -------------------------------------------------------------------------
 
-    /**
-     * Group By
-     *
-     * @param string $cols
-     * @return QB
-     */
     public function groupBy(string ...$cols): QB
     {
         if ($cols) {
@@ -472,38 +319,16 @@ class QB
         return $this;
     }
 
-    /**
-     * Having
-     *
-     * @param string $statement
-     * @param mixed $values
-     * @return QB
-     */
-    public function having(string $statement, ...$values): QB
+    public function having(string $statement, mixed ...$values): QB
     {
         return $this->_having("AND", $statement, $values);
     }
 
-    /**
-     * Or Having
-     *
-     * @param string $statement
-     * @param mixed $values
-     * @return QB
-     */
-    public function orHaving(string $statement, ...$values): QB
+    public function orHaving(string $statement, mixed ...$values): QB
     {
         return $this->_having("OR", $statement, $values);
     }
 
-    /**
-     * Having helper
-     *
-     * @param string $prefix
-     * @param string $statement
-     * @param array $values
-     * @return QB
-     */
     private function _having(string $prefix, string $statement, array $values): QB
     {
         $this->_push($this->having_stack, $prefix, $statement, 'having');
@@ -515,31 +340,16 @@ class QB
         return $this;
     }
 
-    /**
-     * Having Group Start
-     *
-     * @return QB
-     */
     public function havingGroupStart(): QB
     {
         return $this->_havingGroup("AND");
     }
 
-    /**
-     * Or Having Group Start
-     *
-     * @return QB
-     */
     public function orHavingGroupStart(): QB
     {
         return $this->_havingGroup("OR");
     }
 
-    /**
-     * Having Group End
-     *
-     * @return QB
-     */
     public function havingGroupEnd(): QB
     {
         $this->_groupEnd($this->having_stack, 'having');
@@ -547,12 +357,6 @@ class QB
         return $this;
     }
 
-    /**
-     * Having group helper
-     *
-     * @param string $prefix
-     * @return QB
-     */
     private function _havingGroup(string $prefix): QB
     {
         $this->having_stack[] = ['op' => null, 'parts' => [], 'prefix' => $prefix];
@@ -564,46 +368,21 @@ class QB
     // Order
     // -------------------------------------------------------------------------
 
-    /**
-     * Order
-     *
-     * @param string $cols
-     * @return QB
-     */
     public function orderBy(string ...$cols): QB
     {
         return $this->_order($cols);
     }
 
-    /**
-     * Order Asc
-     *
-     * @param string $cols
-     * @return QB
-     */
     public function orderAsc(string ...$cols): QB
     {
         return $this->_order($cols, "ASC");
     }
 
-    /**
-     * Order Desc
-     *
-     * @param string $cols
-     * @return QB
-     */
     public function orderDesc(string ...$cols): QB
     {
         return $this->_order($cols, "DESC");
     }
 
-    /**
-     * Order helper
-     *
-     * @param array $cols
-     * @param string $suffix
-     * @return QB
-     */
     private function _order(array $cols, string $suffix = ""): QB
     {
         if (!$cols) {
@@ -624,11 +403,7 @@ class QB
     // -------------------------------------------------------------------------
 
     /**
-     * Limit
-     *
-     * @param integer $limit
-     * @param integer $offset
-     * @return QB
+     * A limit of 0 means no limit
      */
     public function limit(int $limit, int $offset = 0): QB
     {
@@ -642,14 +417,7 @@ class QB
     // Set
     // -------------------------------------------------------------------------
 
-    /**
-     * Add data
-     *
-     * @param string $col
-     * @param mixed $value
-     * @return QB
-     */
-    public function add(string $col, $value): QB
+    public function add(string $col, mixed $value): QB
     {
         $this->data_keys[] = $col;
         $this->data_values[] = $value;
@@ -658,13 +426,10 @@ class QB
     }
 
     /**
-     * Add raw data
-     *
-     * @param string $col
-     * @param mixed $value
-     * @return QB
+     * The value is inlined as an SQL expression, without placeholder: never
+     * pass it user input
      */
-    public function addRaw(string $col, $value): QB
+    public function addRaw(string $col, string|int|float $value): QB
     {
         $this->data_raw_keys[] = $col;
         $this->data_raw_values[] = $value;
@@ -672,35 +437,18 @@ class QB
         return $this;
     }
 
-    /**
-     * Increment
-     *
-     * @param string $col
-     * @param mixed $value
-     * @return QB
-     */
-    public function increment(string $col, $val = 1): QB
+    public function increment(string $col, int|float|string $val = 1): QB
     {
         return $this->addRaw($col, $col . ' + ' . $val);
     }
 
-    /**
-     * Decrement
-     *
-     * @param string $col
-     * @param mixed $value
-     * @return QB
-     */
-    public function decrement(string $col, $val = 1): QB
+    public function decrement(string $col, int|float|string $val = 1): QB
     {
         return $this->addRaw($col, $col . ' - ' . $val);
     }
 
     /**
-     * Add set of data
-     *
-     * @param array $data
-     * @return QB
+     * @param array<string, mixed> $data values keyed by column
      */
     public function addList(array $data): QB
     {
@@ -712,10 +460,7 @@ class QB
     }
 
     /**
-     * Add set of raw data
-     *
-     * @param array $data
-     * @return QB
+     * @param array<string, string|int|float> $data SQL expressions keyed by column
      */
     public function addListRaw(array $data): QB
     {
@@ -730,11 +475,6 @@ class QB
     // Build
     // -------------------------------------------------------------------------
 
-    /**
-     * Read
-     *
-     * @return Query
-     */
     public function read(): Query
     {
         $str = $this->_buildSelect()
@@ -752,9 +492,7 @@ class QB
     }
 
     /**
-     * Count
-     *
-     * @return Query
+     * Counts the rows the read() query would return, aliased as "sum"
      */
     public function count(): Query
     {
@@ -776,12 +514,6 @@ class QB
         return new Query($str, $data);
     }
 
-    /**
-     * Insert
-     *
-     * @param bool $ignore
-     * @return Query
-     */
     public function insert(bool $ignore = false): Query
     {
         $str = $this->_buildInsert(false, $ignore);
@@ -790,11 +522,6 @@ class QB
         return new Query($str, $data);
     }
 
-    /**
-     * Replace
-     *
-     * @return Query
-     */
     public function replace(): Query
     {
         $str = $this->_buildInsert(true);
@@ -803,12 +530,6 @@ class QB
         return new Query($str, $data);
     }
 
-    /**
-     * Update
-     *
-     * @param bool $ignore
-     * @return Query
-     */
     public function update(bool $ignore = false): Query
     {
         $str = $this->_buildUpdate($ignore);
@@ -817,11 +538,6 @@ class QB
         return new Query($str, $data);
     }
 
-    /**
-     * Delete
-     *
-     * @return Query
-     */
     public function delete(): Query
     {
         $str = $this->_buildDelete()
@@ -836,9 +552,8 @@ class QB
     }
 
     /**
-     * @param array $data
-     * @param boolean $ignore
-     * @return Query
+     * @param array<string, mixed>[] $data rows keyed by column, the columns being
+     *                                     taken from the first row
      */
     public function insertAll(array $data, bool $ignore = false): Query
     {
@@ -846,20 +561,14 @@ class QB
     }
 
     /**
-     * @param array $data
-     * @return Query
+     * @param array<string, mixed>[] $data rows keyed by column, the columns being
+     *                                     taken from the first row
      */
     public function replaceAll(array $data): Query
     {
         return $this->_batch($data, true, false);
     }
 
-    /**
-     * @param array $data
-     * @param boolean $replace
-     * @param boolean $ignore
-     * @return Query
-     */
     private function _batch(array $data, bool $replace, bool $ignore): Query
     {
         if (!$data) {
@@ -885,9 +594,6 @@ class QB
         return new Query(mb_substr($query_str, 0, -2), $query_data);
     }
 
-    /**
-     * @return string
-     */
     private function _buildSelect(): string
     {
         if (!$this->select_stmt) {
@@ -899,25 +605,16 @@ class QB
         return "SELECT" . $distinct . mb_substr($this->select_stmt, 1);
     }
 
-    /**
-     * @return string
-     */
     private function _buildFrom(): string
     {
         return $this->from_stmt ? "\nFROM " . $this->from_stmt : "";
     }
 
-    /**
-     * @return string
-     */
     private function _buildJoin(): string
     {
         return $this->join_stmt;
     }
 
-    /**
-     * @return string
-     */
     private function _buildWhere(): string
     {
         $stmt = $this->_flush($this->where_stack, 'where');

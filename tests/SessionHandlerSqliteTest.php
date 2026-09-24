@@ -76,7 +76,7 @@ class SessionHandlerSqliteTest extends SqliteTestCase
         $this->handler->write('fresh', 'A');
         $this->pdo->exec("INSERT INTO sessions (id, ts, data) VALUES ('stale', 1, 'B');");
 
-        $this->handler->gc(60);
+        self::assertSame(1, $this->handler->gc(60));
 
         self::assertSame('A', $this->handler->read('fresh'));
         self::assertSame('', $this->handler->read('stale'));

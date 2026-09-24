@@ -15,30 +15,19 @@ class SQLiteBuilder
     private array $columns = [];
     private array $fk = [];
 
-    /**
-     * @param string $name
-     */
     public function __construct(string $name)
     {
         $this->name = $name;
     }
 
-    /**
-     * @param string $name
-     * @return static
-     */
     public static function create(string $name): static
     {
         return new static($name);
     }
 
     /**
-     * Add column
-     *
-     * @param string $name PRIMARY KEY AUTOINCREMENT, NOT NULL DEFAULT 0
-     * @param string $type TEXT, INTEGER, NUMERIC, REAL, BLOB
-     * @param string $opt
-     * @return static
+     * @param string $type TEXT, INTEGER, NUMERIC, REAL or BLOB
+     * @param string $opt  e.g. PRIMARY KEY AUTOINCREMENT, NOT NULL DEFAULT 0
      */
     public function col(string $name, string $type, string $opt = ''): static
     {
@@ -46,7 +35,7 @@ class SQLiteBuilder
         return $this;
     }
 
-    public function pk(string ...$columns)
+    public function pk(string ...$columns): static
     {
         $pk = "CONSTRAINT pk PRIMARY KEY (" . join(', ', $columns) . ")";
         array_unshift($this->fk, $pk);
@@ -61,8 +50,6 @@ class SQLiteBuilder
 
     /**
      * Create table
-     *
-     * @return string
      */
     public function add(): string
     {
@@ -81,34 +68,18 @@ class SQLiteBuilder
     }
 
     /**
-     * Delete table
-     *
-     * @return string
+     * Drop table
      */
     public function del(): string
     {
         return "DROP TABLE IF EXISTS {$this->name}";
     }
 
-    /**
-     * Add index
-     *
-     * @param string $name
-     * @param string ...$columns
-     * @return string
-     */
     public function index(string $column): string
     {
         return "CREATE INDEX idx_{$column} ON {$this->name} ({$column});";
     }
 
-    /**
-     * Add unique index
-     *
-     * @param string $name
-     * @param string ...$columns
-     * @return string
-     */
     public function unique(string $column): string
     {
         return "CREATE UNIQUE INDEX unq_{$column} ON {$this->name} ({$column});";

@@ -4,17 +4,12 @@ namespace Bredala\Database\PDO;
 
 use Bredala\Database\Exception;
 
-/**
- * Factory
- */
 class Factory
 {
     /**
-     * @param array $config
-     * @return \PDO
      * @throws Exception
      */
-    public static function create(string $dsn, $username = null, $password = null, array $options = [])
+    public static function create(string $dsn, ?string $username = null, ?string $password = null, array $options = []): \PDO
     {
         // Default options
         $options[\PDO::ATTR_ERRMODE] = $options[\PDO::ATTR_ERRMODE] ?? \PDO::ERRMODE_EXCEPTION;

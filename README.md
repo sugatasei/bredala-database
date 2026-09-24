@@ -322,11 +322,11 @@ Interroge l'`information_schema` de MySQL : non portable vers SQLite ou PostgreS
 
 `Bredala\Database\Exception` Étend `\Exception`. Codes `CONNECT` (1), `PREPARE` (2), `BIND` (3), `EXECUTE` (4), `TRANSACTION` (5).
 
-- `connect(string $msg, \Throwable $prev = null)`
-- `prepare(string $msg, \Throwable $prev = null)`
-- `bind(string $msg, \Throwable $prev = null)`
-- `execute(string $msg, \Throwable $prev = null)`
-- `transaction(string $msg, \Throwable $prev = null)`
+- `connect(string $msg, ?\Throwable $prev = null)`
+- `prepare(string $msg, ?\Throwable $prev = null)`
+- `bind(string $msg, ?\Throwable $prev = null)`
+- `execute(string $msg, ?\Throwable $prev = null)`
+- `transaction(string $msg, ?\Throwable $prev = null)`
 
 Ces méthodes statiques sont des **fabriques, pas des lanceuses** : elles construisent et retournent une exception. Les appeler sans `throw` compile, s'exécute et ne fait rien — c'était précisément le défaut de la validation d'`FB::addFk()`. Toujours écrire `throw Exception::prepare($msg)`.
 

@@ -29,9 +29,6 @@ class FB
     // Schema
     // -------------------------------------------------------------------------
 
-    /**
-     * Create schema
-     */
     public function createSchema(string $name, string $charset = 'utf8mb4', string $collate = 'utf8mb4_general_ci'): string
     {
         $statement = "CREATE SCHEMA IF NOT EXISTS ";
@@ -47,9 +44,6 @@ class FB
         return $this->query($statement);
     }
 
-    /**
-     * Drop schema
-     */
     public function dropSchema(string $name): string
     {
         return $this->query("DROP DATABASE IF EXISTS `{$name}`;");
@@ -59,9 +53,6 @@ class FB
     // Tables
     // -------------------------------------------------------------------------
 
-    /**
-     * Create table
-     */
     public function createTable(string $name, string $comment = ""): string
     {
         [$db, $table] = self::explodeName($name);
@@ -105,18 +96,12 @@ class FB
         return $this->query($statement);
     }
 
-    /**
-     * Drop table
-     */
     public function dropTable(string $name): string
     {
         $name = self::quoteIdentifier($name);
         return $this->query("DROP TABLE IF EXISTS {$name};");
     }
 
-    /**
-     * Rename table
-     */
     public function renameTable(string $from, string $to): string
     {
         $from = self::quoteIdentifier($from);
@@ -127,7 +112,7 @@ class FB
     /**
      * Alter table
      *
-     * Warning : combining several operations of different type, may cause SQL errors
+     * Warning: combining several operations of different types may cause SQL errors
      */
     public function alterTable(string $name): string
     {
@@ -196,7 +181,7 @@ class FB
     // -------------------------------------------------------------------------
 
     /**
-     * Add a column
+     * @param (callable(Column): mixed)|null $callback configures the column
      */
     public function addColumn(string $name, ?callable $callback = null): static
     {
@@ -206,9 +191,6 @@ class FB
         return $this;
     }
 
-    /**
-     * Drop a column
-     */
     public function dropColumn(string $name): static
     {
         $this->cols['drop'][] = $name;
@@ -216,7 +198,7 @@ class FB
     }
 
     /**
-     * Change a column
+     * @param (callable(Column): mixed)|null $callback configures the column
      */
     public function changeColumn(string $name, ?string $new_name = null, ?callable $callback = null): static
     {
@@ -232,10 +214,7 @@ class FB
     // Primary
     // -------------------------------------------------------------------------
 
-    /**
-     * Add a primary key
-     */
-    public function addPrimary(...$names): static
+    public function addPrimary(string ...$names): static
     {
         foreach ($names as $name) {
             $this->primary['add'][] = "`{$name}`";
@@ -243,10 +222,6 @@ class FB
         return $this;
     }
 
-    /**
-     * Drop primary key
-     * @return $this
-     */
     public function dropPrimary(): static
     {
         $this->primary['drop'] = true;
@@ -258,11 +233,8 @@ class FB
     // -------------------------------------------------------------------------
 
     /**
-     * Add an index key
-     *
-     * @param string $name
-     * @param array $cols
-     * @return $this
+     * @param array<string, bool> $cols ascending flag keyed by column; defaults
+     *                                  to the column named $name, ascending
      */
     public function addIndex(string $name, array $cols = []): static
     {
@@ -271,11 +243,8 @@ class FB
     }
 
     /**
-     * Add an unique key
-     *
-     * @param string $name
-     * @param array $cols
-     * @return $this
+     * @param array<string, bool> $cols ascending flag keyed by column; defaults
+     *                                  to the column named $name, ascending
      */
     public function addUnique(string $name, array $cols = []): static
     {
@@ -284,11 +253,8 @@ class FB
     }
 
     /**
-     * Add fulltext key
-     *
-     * @param string $name
-     * @param array $cols
-     * @return $this
+     * @param array<string, bool> $cols ascending flag keyed by column; defaults
+     *                                  to the column named $name, ascending
      */
     public function addFulltext(string $name, array $cols = []): static
     {
@@ -296,10 +262,6 @@ class FB
         return $this;
     }
 
-
-    /**
-     * Add an foreign key
-     */
     private function buildKey(string $name, ?string $type, array $cols): array
     {
         if (!$cols) $cols[$name] = true;
@@ -316,30 +278,18 @@ class FB
         ];
     }
 
-    /**
-     * Drop index
-     *
-     * @param string $name
-     * @return $this
-     */
     public function dropIndex(string $name): static
     {
         $this->keys['drop'][] = $name . '_idx';
         return $this;
     }
 
-    /**
-     * Drop unique
-     */
     public function dropUnique(string $name): static
     {
         $this->keys['drop'][] = $name . '_unq';
         return $this;
     }
 
-    /**
-     * Drop unique
-     */
     public function dropFulltext(string $name): static
     {
         $this->keys['drop'][] = $name . '_txt';
@@ -351,9 +301,10 @@ class FB
     // -------------------------------------------------------------------------
 
     /**
-     * Add a foreign key
+     * @param string $target referenced column, as "table.column"
+     * @throws Exception
      */
-    public function addFk(string $field, string $target, $delete = 'CASCADE', $update = 'CASCADE'): static
+    public function addFk(string $field, string $target, string $delete = 'CASCADE', string $update = 'CASCADE'): static
     {
         $target_array = explode('.', $target);
 
@@ -372,26 +323,17 @@ class FB
         return $this;
     }
 
-    /**
-     * Add Foreign key index
-     */
     public function addFkIndex(string $field): static
     {
         return $this->addIndex($field . '_fk', [$field => true]);
     }
 
-    /**
-     * Drop a foreign key
-     */
     public function dropFk(string $field): static
     {
         $this->fk['drop'][] = $field;
         return $this;
     }
 
-    /**
-     * Drop Foreign key index
-     */
     public function dropFkIndex(string $field): static
     {
         return $this->dropIndex($field . '_fk');
@@ -402,10 +344,7 @@ class FB
     // -------------------------------------------------------------------------
 
     /**
-     * Check an identifier
-     *
-     * @param string $value
-     * @return string
+     * @throws Exception if the value is not alphanumeric
      */
     public static function checkIdentifier(string $value): string
     {
@@ -417,10 +356,6 @@ class FB
         return $value;
     }
 
-    /**
-     * @param string $statement
-     * @return string
-     */
     protected function query(string $statement): string
     {
         return $statement;
@@ -429,8 +364,7 @@ class FB
     /**
      * Get db name and table from a name
      *
-     * @param string $name
-     * @return array
+     * @return array{string, string} [db, table], db being '' when absent
      */
     protected static function explodeName(string $name): array
     {
@@ -440,13 +374,6 @@ class FB
         return [$name[0], $name[1]];
     }
 
-    /**
-     * Quote name from a db name and a table name
-     *
-     * @param string $db
-     * @param string $table
-     * @return string
-     */
     protected static function quoteName(string $db, string $table): string
     {
         if ($db) return "`{$db}`.`{$table}`";
@@ -455,9 +382,6 @@ class FB
 
     /**
      * Quote an identifier (table name or column name)
-     *
-     * @param string $field
-     * @return string
      */
     protected static function quoteIdentifier(string $field): string
     {
@@ -472,11 +396,8 @@ class FB
      * use it to decide whether to emit the clause. Every other value, falsy
      * ones included, is quoted: '0', '' and false must not silently collapse
      * into a bare DEFAULT.
-     *
-     * @param scalar|null $value
-     * @return string
      */
-    public static function quote($value): string
+    public static function quote(string|int|float|bool|null $value): string
     {
         if ($value === null) {
             return '';

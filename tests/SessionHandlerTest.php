@@ -111,9 +111,11 @@ class SessionHandlerTest extends TestCase
 
     public function testGcDeletesExpiredSessions()
     {
-        $handler = new SessionHandler($this->driver());
+        $driver = $this->driver();
+        $driver->method('count')->willReturn(3);
+        $handler = new SessionHandler($driver);
 
-        self::assertTrue($handler->gc(1440));
+        self::assertSame(3, $handler->gc(1440));
         self::assertSame("DELETE  FROM\n\tsessions\nWHERE\n\tts < ?;", $this->lastStatement());
         self::assertLessThanOrEqual(time() - 1440, $this->lastData()[0]);
     }

@@ -8,61 +8,37 @@ use Bredala\Database\QueryInterface;
 
 class DB implements DBInterface
 {
-    const HOOK_BEFORE_QUERY = 'before_query';
-    const HOOK_AFTER_QUERY = 'after_query';
+    const string HOOK_BEFORE_QUERY = 'before_query';
+    const string HOOK_AFTER_QUERY = 'after_query';
+
+    private \PDO $pdo;
+    private ?\PDOStatement $stmt = null;
 
     /**
-     * @var \PDO
+     * @var array<string, callable[]>
      */
-    private $pdo;
-
-    /**
-     * @var \PDOStatement
-     */
-    private $stmt;
-
-    /**
-     * @var array
-     */
-    private $hooks = [];
+    private array $hooks = [];
 
     // -------------------------------------------------------------------------
 
-    /**
-     * @param \PDO $pdo
-     */
     public function __construct(\PDO $pdo)
     {
         $this->pdo = $pdo;
     }
 
-    /**
-     * @param \PDO $pdo
-     * @return $this
-     */
-    public static function create(\PDO $pdo)
+    public static function create(\PDO $pdo): static
     {
         return new static($pdo);
     }
 
     // -------------------------------------------------------------------------
 
-    /**
-     * @param string $hook
-     * @param callable $callback
-     * @return DBInterface
-     */
     public function addHook(string $hook, callable $callback): DBInterface
     {
         $this->hooks[$hook][] = $callback;
         return $this;
     }
 
-    /**
-     * @param string $hook
-     * @param array $params
-     * @return DBInterface
-     */
     public function execHook(string $hook, array $params = []): DBInterface
     {
         foreach ($this->hooks[$hook] ?? [] as $callback) {
@@ -74,13 +50,6 @@ class DB implements DBInterface
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Changes the current database
-     *
-     * @param string $database
-     * @return DBInterface
-     * @throws Exception
-     */
     public function use(string $database): DBInterface
     {
         try {
@@ -92,24 +61,11 @@ class DB implements DBInterface
         return $this;
     }
 
-
-
-    /**
-     * Returns the last inserted id
-     *
-     * @return integer
-     */
     public function getId(): int
     {
         return $this->pdo->lastInsertId() ?: 0;
     }
 
-    /**
-     * Escapes a string
-     *
-     * @param string $str
-     * @return string
-     */
     public function escape(string $str): string
     {
         return $this->pdo->quote($str);
@@ -117,12 +73,6 @@ class DB implements DBInterface
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Start a transaction
-     *
-     * @return DBInterface
-     * @throws Exception
-     */
     public function transaction(): DBInterface
     {
         try {
@@ -134,12 +84,6 @@ class DB implements DBInterface
         return $this;
     }
 
-    /**
-     * Commit a transaction
-     *
-     * @return DBInterface
-     * @throws Exception
-     */
     public function commit(): DBInterface
     {
         try {
@@ -151,12 +95,6 @@ class DB implements DBInterface
         return $this;
     }
 
-    /**
-     * Rollback a transaction
-     *
-     * @return DBInterface
-     * @throws Exception
-     */
     public function rollback(): DBInterface
     {
         try {
@@ -170,21 +108,11 @@ class DB implements DBInterface
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Do not check foreign key constraints
-     *
-     * @return DBInterface
-     */
     public function disableFkCheck(): DBInterface
     {
         return $this->query("SET FOREIGN_KEY_CHECKS=0;");
     }
 
-    /**
-     * Check foreign key constraints
-     *
-     * @return DBInterface
-     */
     public function enableFkCheck(): DBInterface
     {
         return $this->query("SET FOREIGN_KEY_CHECKS=1;");
@@ -192,18 +120,11 @@ class DB implements DBInterface
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Executes an SQL statement
-     *
-     * @param string $sql
-     * @return DBInterface
-     * @throws Exception
-     */
     public function query(string $sql): DBInterface
     {
         try {
             $this->execHook(static::HOOK_BEFORE_QUERY);
-            $this->stmt = $this->pdo->query($sql);
+            $this->stmt = $this->pdo->query($sql) ?: null;
             $this->execHook(static::HOOK_AFTER_QUERY);
         } catch (\PDOException $ex) {
             throw Exception::execute(__METHOD__, $ex);
@@ -212,18 +133,11 @@ class DB implements DBInterface
         return $this;
     }
 
-    /**
-     * Prepares a statement for execution
-     *
-     * @param string $statement
-     * @return DBInterface
-     * @throws Exception
-     */
     public function prepare(string $statement): DBInterface
     {
         try {
             $this->execHook(static::HOOK_BEFORE_QUERY);
-            $this->stmt = $this->pdo->prepare($statement);
+            $this->stmt = $this->pdo->prepare($statement) ?: null;
         } catch (\PDOException $ex) {
             throw Exception::prepare(__METHOD__, $ex);
         }
@@ -231,13 +145,6 @@ class DB implements DBInterface
         return $this;
     }
 
-    /**
-     * Executes a SQL statement from a Query object
-     *
-     * @param QueryInterface $query
-     * @return DBInterface
-     * @throws Exception
-     */
     public function exec(QueryInterface $query): DBInterface
     {
         return $this
@@ -249,7 +156,7 @@ class DB implements DBInterface
     // Statements
     // -------------------------------------------------------------------------
 
-    public function bind(...$args): DBInterface
+    public function bind(mixed ...$args): DBInterface
     {
         if (!$this->stmt) {
             return $this;
@@ -259,13 +166,6 @@ class DB implements DBInterface
         return $this;
     }
 
-    /**
-     * Executes a prepared statement
-     *
-     * @param array $data
-     * @return DBInterface
-     * @throws Exception
-     */
     public function execute(array $data = []): DBInterface
     {
         if (!$this->stmt) {
@@ -282,12 +182,7 @@ class DB implements DBInterface
         return $this;
     }
 
-    /**
-     * Fetch all results
-     *
-     * @return array
-     */
-    public function all()
+    public function all(): array
     {
         if (!$this->stmt) {
             return [];
@@ -296,13 +191,7 @@ class DB implements DBInterface
         return $this->stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Fetch next result
-     *
-     * @param bool|string $object Fetch as object
-     * @return array|null
-     */
-    public function next()
+    public function next(): ?array
     {
         if (!$this->stmt) {
             return null;
@@ -318,10 +207,8 @@ class DB implements DBInterface
      * statements that modify rows, and on a SELECT the SQLite driver reports 0,
      * which used to make this method return null for every query. It is done by
      * probing for a second row instead, which every driver supports.
-     *
-     * @return array|null
      */
-    public function one()
+    public function one(): ?array
     {
         if (!$this->stmt) {
             return null;
@@ -343,10 +230,8 @@ class DB implements DBInterface
      * INSERT, UPDATE, DELETE or REPLACE. On a SELECT its value is driver
      * dependent — SQLite reports 0 — so count the rows in SQL instead, with
      * QB::count(), rather than reading it here.
-     *
-     * @return int
      */
-    public function count()
+    public function count(): int
     {
         if (!$this->stmt) {
             return 0;

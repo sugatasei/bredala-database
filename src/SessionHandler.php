@@ -3,8 +3,6 @@
 namespace Bredala\Database;
 
 /**
- * SessionHandler
- *
  * A Session handler using Bredala\Database
  *
  * SQL table sessions :
@@ -14,37 +12,17 @@ namespace Bredala\Database;
  */
 class SessionHandler implements \SessionHandlerInterface
 {
-
-    /**
-     * @var \Bredala\Database\DBInterface
-     */
-    private $driver;
-
-    /**
-     * @var string
-     */
-    private $table = 'sessions';
-
-    /**
-     * @var string
-     */
-    private $col_id;
-
-    /**
-     * @var string
-     */
-    private $col_data;
-
-    /**
-     * @var string
-     */
-    private $col_time;
+    private DBInterface $driver;
+    private string $table;
+    private string $col_id;
+    private string $col_data;
+    private string $col_time;
 
     // -------------------------------------------------------------------------
 
     /**
-     * @param DBInterface $driver
-     * @param array $options
+     * @param array{table?: string, id?: string, time?: string, data?: string} $options
+     *        table and column names, defaulting to sessions, id, ts and data
      */
     public function __construct(DBInterface $driver, array $options = [])
     {
@@ -57,30 +35,17 @@ class SessionHandler implements \SessionHandlerInterface
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Open data
-     *
-     * @param string $save_path
-     * @param string $name
-     * @return bool
-     */
-    public function open($save_path, $name)
+    public function open(string $path, string $name): bool
     {
-        return $this->driver ? true : false;
+        return true;
     }
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Read data
-     *
-     * @param string $session_id
-     * @return string
-     */
-    public function read($session_id)
+    public function read(string $id): string|false
     {
         $query = QB::create($this->table)
-            ->whereEq($this->col_id, $session_id)
+            ->whereEq($this->col_id, $id)
             ->read();
 
         $row = $this->driver->exec($query)->one();
@@ -89,19 +54,12 @@ class SessionHandler implements \SessionHandlerInterface
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Save all
-     *
-     * @param string $session_id
-     * @param string $session_data
-     * @return bool
-     */
-    public function write($session_id, $session_data)
+    public function write(string $id, string $data): bool
     {
         $query = QB::create($this->table)
-            ->add($this->col_id, $session_id)
+            ->add($this->col_id, $id)
             ->add($this->col_time, time())
-            ->add($this->col_data, $session_data)
+            ->add($this->col_data, $data)
             ->replace();
 
         $this->driver->exec($query);
@@ -111,16 +69,10 @@ class SessionHandler implements \SessionHandlerInterface
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Destroy current session
-     *
-     * @param string $session_id
-     * @return bool
-     */
-    public function destroy($session_id)
+    public function destroy(string $id): bool
     {
         $query = QB::create($this->table)
-            ->whereEq($this->col_id, $session_id)
+            ->whereEq($this->col_id, $id)
             ->delete();
 
         $this->driver->exec($query);
@@ -130,33 +82,23 @@ class SessionHandler implements \SessionHandlerInterface
 
     // -------------------------------------------------------------------------
 
-    /**
-     * Close
-     *
-     * @return bool
-     */
-    public function close()
+    public function close(): bool
     {
-        return $this->driver ? true : false;
+        return true;
     }
 
     // -------------------------------------------------------------------------
 
     /**
-     * Garbage collector
-     *
-     * @param int $maxlifetime
-     * @return bool
+     * Deletes the expired sessions and returns how many were deleted
      */
-    public function gc($maxlifetime)
+    public function gc(int $max_lifetime): int|false
     {
         $query = QB::create($this->table)
-            ->where($this->col_time . ' < ?', time() - $maxlifetime)
+            ->where($this->col_time . ' < ?', time() - $max_lifetime)
             ->delete();
 
-        $this->driver->exec($query);
-
-        return true;
+        return $this->driver->exec($query)->count();
     }
 
     // -------------------------------------------------------------------------

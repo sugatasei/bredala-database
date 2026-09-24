@@ -4,11 +4,11 @@ namespace Bredala\Database\Doc;
 
 class DocTable
 {
-    public $name;
-    public $comment;
+    public string $name = '';
+    public ?string $comment = null;
 
     /**
      * @var DocField[]
      */
-    public $fields = [];
+    public array $fields = [];
 }

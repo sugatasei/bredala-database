@@ -3,75 +3,46 @@
 namespace Bredala\Database;
 
 /**
- * Exception
- *
  * DB exception class
+ *
+ * The static methods are factories: they return the exception, the caller
+ * still has to throw it.
  */
 class Exception extends \Exception
 {
-    const CONNECT = 1;
-    const PREPARE = 2;
-    const BIND = 3;
-    const EXECUTE = 4;
-    const TRANSACTION = 5;
-    const BUILD = 6;
+    const int CONNECT = 1;
+    const int PREPARE = 2;
+    const int BIND = 3;
+    const int EXECUTE = 4;
+    const int TRANSACTION = 5;
+    const int BUILD = 6;
 
-    /**
-     * @param string $msg
-     * @param \Throwable $prev
-     * @return $this
-     */
-    public static function connect(string $msg, \Throwable $prev = null)
+    public static function connect(string $msg, ?\Throwable $prev = null): static
     {
         return new static($msg, self::CONNECT, $prev);
     }
 
-    /**
-     * @param string $msg
-     * @param \Throwable $prev
-     * @return $this
-     */
-    public static function prepare(string $msg, \Throwable $prev = null)
+    public static function prepare(string $msg, ?\Throwable $prev = null): static
     {
         return new static($msg, self::PREPARE, $prev);
     }
 
-    /**
-     * @param string $msg
-     * @param \Throwable $prev
-     * @return $this
-     */
-    public static function bind(string $msg, \Throwable $prev = null)
+    public static function bind(string $msg, ?\Throwable $prev = null): static
     {
         return new static($msg, self::BIND, $prev);
     }
 
-    /**
-     * @param string $msg
-     * @param \Throwable $prev
-     * @return $this
-     */
-    public static function execute(string $msg, \Throwable $prev = null)
+    public static function execute(string $msg, ?\Throwable $prev = null): static
     {
         return new static($msg, self::EXECUTE, $prev);
     }
 
-    /**
-     * @param string $msg
-     * @param \Throwable $prev
-     * @return $this
-     */
-    public static function transaction(string $msg, \Throwable $prev = null)
+    public static function transaction(string $msg, ?\Throwable $prev = null): static
     {
         return new static($msg, self::TRANSACTION, $prev);
     }
 
-    /**
-     * @param string $msg
-     * @param \Throwable $prev
-     * @return $this
-     */
-    public static function build(string $msg, \Throwable $prev = null)
+    public static function build(string $msg, ?\Throwable $prev = null): static
     {
         return new static($msg, self::BUILD, $prev);
     }
